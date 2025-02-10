@@ -32,7 +32,7 @@ class RegisterActivity : AppCompatActivity() {
             val name = binding.nameEditText.text.toString()
             val email = binding.emailEditText.text.toString()
             val password = binding.passwordEditText.text.toString()
-            val role = if (binding.crRadioButton.isChecked) User.ROLE_CR else User.ROLE_STUDENT
+            val role = if (binding.studentRadio.isChecked) User.ROLE_STUDENT else User.ROLE_CR
 
             if (validateInput(name, email, password)) {
                 registerUser(name, email, password, role)

@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,24 +24,16 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import com.google.firebase.storage.StorageException
+import com.example.routine.MainActivity
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
     private var currentUser: User? = null
-    private var selectedImageUri: Uri? = null
-
-    private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                selectedImageUri = uri
-                binding.profileImage.setImageURI(uri)
-                uploadImage(uri)
-            }
-        }
-    }
+    private var isPhoneEdited = false
+    private var valueEventListener: ValueEventListener? = null
+    private var isLoggingOut = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,43 +51,61 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        binding.editImageButton.setOnClickListener {
-            openImagePicker()
+        binding.editPhoneButton.setOnClickListener {
+            binding.phoneEditText.isEnabled = true
+            binding.phoneEditText.requestFocus()
         }
+
+        binding.phoneEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val newPhone = s?.toString()?.trim() ?: ""
+                val currentPhone = currentUser?.phoneNumber ?: ""
+                isPhoneEdited = newPhone != currentPhone
+                updateSaveButtonVisibility()
+            }
+        })
 
         binding.saveButton.setOnClickListener {
             updateProfile()
         }
-    }
 
-    private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
+        binding.logoutButton.setOnClickListener {
+            isLoggingOut = true
+            (activity as? MainActivity)?.handleLogout()
         }
-        imagePickerLauncher.launch(intent)
     }
 
     private fun loadUserProfile() {
         val userId = Firebase.auth.currentUser?.uid ?: return
-        Firebase.database.reference
-            .child("users")
-            .child(userId)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
+        
+        valueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (isAdded && _binding != null) {
                     currentUser = snapshot.getValue(User::class.java)
                     currentUser?.let { user ->
                         updateUI(user)
                     }
                 }
+            }
 
-                override fun onCancelled(error: DatabaseError) {
+            override fun onCancelled(error: DatabaseError) {
+                // Don't show error toast if we're logging out
+                if (isAdded && context != null && !isLoggingOut) {
                     Toast.makeText(
-                        context,
+                        requireContext(),
                         getString(R.string.update_failed, error.message),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-            })
+            }
+        }
+
+        Firebase.database.reference
+            .child("users")
+            .child(userId)
+            .addValueEventListener(valueEventListener!!)
     }
 
     private fun updateUI(user: User) {
@@ -102,44 +114,11 @@ class ProfileFragment : Fragment() {
             emailText.text = getString(R.string.profile_email, user.email)
             roleText.text = getString(R.string.profile_role, user.role)
             phoneEditText.setText(user.phoneNumber)
-
-            if (user.profileImageUrl.isNotEmpty()) {
-                Glide.with(this@ProfileFragment)
-                    .load(user.profileImageUrl)
-                    .placeholder(R.drawable.default_profile)
-                    .into(profileImage)
-            }
         }
     }
 
-    private fun uploadImage(uri: Uri) {
-        val userId = Firebase.auth.currentUser?.uid ?: return
-        val storageRef = Firebase.storage.reference
-            .child("profile_images")
-            .child("$userId.jpg")
-
-        storageRef.putFile(uri)
-            .addOnSuccessListener {
-                storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                    updateProfileImageUrl(downloadUri.toString())
-                }
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(
-                    context,
-                    getString(R.string.update_failed, e.message),
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-    }
-
-    private fun updateProfileImageUrl(imageUrl: String) {
-        val userId = Firebase.auth.currentUser?.uid ?: return
-        Firebase.database.reference
-            .child("users")
-            .child(userId)
-            .child("profileImageUrl")
-            .setValue(imageUrl)
+    private fun updateSaveButtonVisibility() {
+        binding.saveButton.visibility = if (isPhoneEdited) View.VISIBLE else View.GONE
     }
 
     private fun updateProfile() {
@@ -159,6 +138,9 @@ class ProfileFragment : Fragment() {
                             R.string.profile_updated,
                             Toast.LENGTH_SHORT
                         ).show()
+                        binding.phoneEditText.isEnabled = false
+                        isPhoneEdited = false
+                        updateSaveButtonVisibility()
                     } else {
                         Toast.makeText(
                             context,
@@ -170,16 +152,18 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun setupLogoutButton() {
-        binding.logoutButton.setOnClickListener {
-            Firebase.auth.signOut()
-            startActivity(Intent(requireContext(), LoginActivity::class.java))
-            requireActivity().finish()
-        }
-    }
-
     override fun onDestroyView() {
-        super.onDestroyView()
+        // Remove the listener when the view is destroyed
+        valueEventListener?.let { listener ->
+            val userId = Firebase.auth.currentUser?.uid
+            if (userId != null) {
+                Firebase.database.reference
+                    .child("users")
+                    .child(userId)
+                    .removeEventListener(listener)
+            }
+        }
         _binding = null
+        super.onDestroyView()
     }
 } 

@@ -45,52 +45,42 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun loadNotifications() {
-        println("Loading notifications...")
+        println("Loading notifications...")  // Keep this for debugging in logcat if needed
 
-        valueEventListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                println("Notification data changed. Count: ${snapshot.childrenCount}")
-                
-                val notifications = snapshot.children.mapNotNull { 
-                    it.getValue(Notification::class.java) 
-                }.sortedByDescending { it.timestamp }
-                
-                println("Parsed notifications: ${notifications.size}")
-                
-                // Check if fragment is still attached and view exists
-                if (isAdded && _binding != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        adapter.submitList(notifications)
-                        binding.emptyText.visibility = 
-                            if (notifications.isEmpty()) View.VISIBLE else View.GONE
-                        
+        Firebase.database.reference
+            .child("notifications")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    println("Notification data changed. Count: ${snapshot.childrenCount}")
+                    
+                    val notifications = snapshot.children.mapNotNull { 
+                        it.getValue(Notification::class.java) 
+                    }.sortedByDescending { it.timestamp }
+                    
+                    println("Parsed notifications: ${notifications.size}")
+                    
+                    if (isAdded && _binding != null) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            adapter.submitList(notifications)
+                            binding.emptyText.visibility = 
+                                if (notifications.isEmpty()) View.VISIBLE else View.GONE
+                        }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    println("Error loading notifications: ${error.message}")
+                    if (isAdded) {
                         context?.let { ctx ->
                             Toast.makeText(
                                 ctx,
-                                "Loaded ${notifications.size} notifications",
+                                "Error loading notifications: ${error.message}",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
                 }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                println("Error loading notifications: ${error.message}")
-                if (isAdded) {
-                    context?.let { ctx ->
-                        Toast.makeText(
-                            ctx,
-                            "Error loading notifications: ${error.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            }
-        }
-
-        // Add the listener
-        notificationsRef.addValueEventListener(valueEventListener!!)
+            })
     }
 
     override fun onDestroyView() {

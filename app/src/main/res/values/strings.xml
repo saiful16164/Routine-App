@@ -60,4 +60,6 @@
     <string name="profile_updated">Profile updated successfully</string>
     <string name="update_failed">Failed to update profile: %1$s</string>
     <string name="select_image">Select Image</string>
+    <string name="edit_phone_number">Edit phone number</string>
+    <string name="fill_all_fields">All fields are required</string>
 </resources>

@@ -43,7 +43,7 @@ class LoginActivity : AppCompatActivity() {
             loginUser(email, password)
         }
 
-        binding.registerText.setOnClickListener {
+        binding.registerLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
     }

@@ -7,6 +7,5 @@ data class ClassSchedule(
     val room: String = "",
     val date: Long = 0,
     val startTime: Long = 0,
-    val endTime: Long = 0,
-    val isNoClass: Boolean = false
+    val endTime: Long = 0
 ) 
