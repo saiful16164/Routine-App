@@ -1,5 +1,6 @@
 package com.example.routine.adapters
 
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -7,11 +8,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.routine.databinding.ItemNotificationBinding
 import com.example.routine.models.Notification
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
-class NotificationsAdapter : ListAdapter<Notification, NotificationsAdapter.ViewHolder>(NotificationDiffCallback()) {
+class NotificationsAdapter : ListAdapter<Notification, NotificationsAdapter.ViewHolder>(DiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemNotificationBinding.inflate(
@@ -29,18 +27,21 @@ class NotificationsAdapter : ListAdapter<Notification, NotificationsAdapter.View
     class ViewHolder(
         private val binding: ItemNotificationBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        private val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
 
         fun bind(notification: Notification) {
             binding.apply {
                 titleText.text = notification.title
                 messageText.text = notification.message
-                timeText.text = dateFormat.format(Date(notification.timestamp))
+                timeText.text = DateUtils.getRelativeTimeSpanString(
+                    notification.timestamp,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS
+                )
             }
         }
     }
 
-    private class NotificationDiffCallback : DiffUtil.ItemCallback<Notification>() {
+    private class DiffCallback : DiffUtil.ItemCallback<Notification>() {
         override fun areItemsTheSame(oldItem: Notification, newItem: Notification): Boolean {
             return oldItem.id == newItem.id
         }

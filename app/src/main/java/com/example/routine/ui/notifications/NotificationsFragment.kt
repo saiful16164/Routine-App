@@ -4,12 +4,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.routine.adapters.NotificationsAdapter
 import com.example.routine.databinding.FragmentNotificationsBinding
 import com.example.routine.models.Notification
-import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
@@ -21,6 +21,8 @@ class NotificationsFragment : Fragment() {
     private var _binding: FragmentNotificationsBinding? = null
     private val binding get() = _binding!!
     private lateinit var adapter: NotificationsAdapter
+    private var valueEventListener: ValueEventListener? = null
+    private val notificationsRef = Firebase.database.reference.child("notifications")
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,27 +45,60 @@ class NotificationsFragment : Fragment() {
     }
 
     private fun loadNotifications() {
-        val userId = Firebase.auth.currentUser?.uid ?: return
-        Firebase.database.reference.child("notifications").child(userId)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val notifications = snapshot.children.mapNotNull { 
-                        it.getValue(Notification::class.java) 
-                    }.sortedByDescending { it.timestamp }
-                    
+        println("Loading notifications...")
+
+        valueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                println("Notification data changed. Count: ${snapshot.childrenCount}")
+                
+                val notifications = snapshot.children.mapNotNull { 
+                    it.getValue(Notification::class.java) 
+                }.sortedByDescending { it.timestamp }
+                
+                println("Parsed notifications: ${notifications.size}")
+                
+                // Check if fragment is still attached and view exists
+                if (isAdded && _binding != null) {
                     viewLifecycleOwner.lifecycleScope.launch {
                         adapter.submitList(notifications)
+                        binding.emptyText.visibility = 
+                            if (notifications.isEmpty()) View.VISIBLE else View.GONE
+                        
+                        context?.let { ctx ->
+                            Toast.makeText(
+                                ctx,
+                                "Loaded ${notifications.size} notifications",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
+            }
 
-                override fun onCancelled(error: DatabaseError) {
-                    // Handle error
+            override fun onCancelled(error: DatabaseError) {
+                println("Error loading notifications: ${error.message}")
+                if (isAdded) {
+                    context?.let { ctx ->
+                        Toast.makeText(
+                            ctx,
+                            "Error loading notifications: ${error.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-            })
+            }
+        }
+
+        // Add the listener
+        notificationsRef.addValueEventListener(valueEventListener!!)
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
+        // Remove the listener when the view is destroyed
+        valueEventListener?.let {
+            notificationsRef.removeEventListener(it)
+        }
         _binding = null
+        super.onDestroyView()
     }
 } 

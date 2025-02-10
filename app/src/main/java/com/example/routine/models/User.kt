@@ -7,7 +7,9 @@ data class User(
     val role: String = "student", // Default role is student
     val isVerified: Boolean = false,
     val verificationCode: String? = null,
-    val codeExpiry: Long = 0
+    val codeExpiry: Long = 0,
+    val phoneNumber: String = "",
+    val profileImageUrl: String = ""
 ) {
     companion object {
         const val ROLE_STUDENT = "student"

@@ -22,6 +22,7 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val days = listOf("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
+    private var valueEventListener: ValueEventListener? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -36,54 +37,59 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupViewPager()
         checkUserRole()
-        setupFabClick()
     }
 
     private fun setupViewPager() {
-        val pagerAdapter = DaysPagerAdapter(requireActivity())
-        binding.viewPager.adapter = pagerAdapter
+        val adapter = DaysPagerAdapter(this, days)
+        binding.viewPager.adapter = adapter
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> getString(R.string.sunday)
-                1 -> getString(R.string.monday)
-                2 -> getString(R.string.tuesday)
-                3 -> getString(R.string.wednesday)
-                4 -> getString(R.string.thursday)
-                5 -> getString(R.string.friday)
-                else -> getString(R.string.saturday)
-            }
+            tab.text = getString(
+                when (days[position]) {
+                    "sunday" -> R.string.sunday
+                    "monday" -> R.string.monday
+                    "tuesday" -> R.string.tuesday
+                    "wednesday" -> R.string.wednesday
+                    "thursday" -> R.string.thursday
+                    "friday" -> R.string.friday
+                    else -> R.string.saturday
+                }
+            )
         }.attach()
     }
 
     private fun checkUserRole() {
         val userId = Firebase.auth.currentUser?.uid ?: return
-        Firebase.database.reference.child("users").child(userId)
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
+        valueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (isAdded && _binding != null) {  // Check if fragment is still attached
                     val user = snapshot.getValue(User::class.java)
                     binding.fabAdd.visibility = if (user?.role == User.ROLE_CR) View.VISIBLE else View.GONE
-                }
 
-                override fun onCancelled(error: DatabaseError) {
-                    // Handle error
+                    binding.fabAdd.setOnClickListener {
+                        val position = binding.viewPager.currentItem
+                        showAddClassDialog(days[position])
+                    }
                 }
-            })
-    }
+            }
 
-    private fun setupFabClick() {
-        binding.fabAdd.setOnClickListener {
-            showAddClassDialog()
+            override fun onCancelled(error: DatabaseError) {
+                // Handle error
+            }
         }
+
+        Firebase.database.reference
+            .child("users")
+            .child(userId)
+            .addValueEventListener(valueEventListener!!)
     }
 
-    private fun showAddClassDialog() {
-        val currentDay = days[binding.viewPager.currentItem]
+    private fun showAddClassDialog(dayId: String) {
         EditClassDialog.newInstance(
             onSave = { classSchedule ->
                 Firebase.database.reference
                     .child("schedule")
-                    .child(currentDay)
+                    .child(dayId)
                     .child(classSchedule.classId)
                     .setValue(classSchedule)
             }
@@ -91,7 +97,17 @@ class HomeFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
+        // Remove the listener when the view is destroyed
+        valueEventListener?.let { listener ->
+            val userId = Firebase.auth.currentUser?.uid
+            if (userId != null) {
+                Firebase.database.reference
+                    .child("users")
+                    .child(userId)
+                    .removeEventListener(listener)
+            }
+        }
         _binding = null
+        super.onDestroyView()
     }
 } 

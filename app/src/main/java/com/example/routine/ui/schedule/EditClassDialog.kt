@@ -12,11 +12,14 @@ import androidx.fragment.app.DialogFragment
 import com.example.routine.R
 import com.example.routine.databinding.DialogEditClassBinding
 import com.example.routine.models.ClassSchedule
+import com.example.routine.models.Notification
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 
 class EditClassDialog : DialogFragment() {
     private var _binding: DialogEditClassBinding? = null
@@ -222,11 +225,57 @@ class EditClassDialog : DialogFragment() {
             date = selectedDate,
             startTime = startTime,
             endTime = endTime,
-            isNoClass = false
+            isNoClass = isNoClass
         )
 
         onSave?.invoke(schedule)
+
+        // Send notification based on whether it's a new class or update
+        if (classSchedule == null) {
+            sendNotification(schedule, isUpdate = false)
+        } else {
+            sendNotification(schedule, isUpdate = true)
+        }
+
         return true
+    }
+
+    private fun sendNotification(classSchedule: ClassSchedule, isUpdate: Boolean) {
+        val notification = Notification(
+            id = UUID.randomUUID().toString(),
+            title = if (isUpdate) "Class Updated" else "New Class Added",
+            message = buildNotificationMessage(classSchedule, isUpdate),
+            timestamp = System.currentTimeMillis(),
+            classId = classSchedule.classId,
+            type = if (isUpdate) Notification.TYPE_CLASS_UPDATED else Notification.TYPE_CLASS_ADDED
+        )
+
+        println("Sending notification: $notification")
+
+        Firebase.database.reference
+            .child("notifications")
+            .child(notification.id)
+            .setValue(notification)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    println("Notification sent successfully")
+                } else {
+                    println("Failed to send notification: ${task.exception?.message}")
+                }
+            }
+    }
+
+    private fun buildNotificationMessage(classSchedule: ClassSchedule, isUpdate: Boolean): String {
+        val dateFormat = SimpleDateFormat("EEEE, MMM dd", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        
+        return if (isUpdate) {
+            "Class ${classSchedule.subject} has been updated for ${dateFormat.format(Date(classSchedule.date))} " +
+            "at ${timeFormat.format(Date(classSchedule.startTime))}"
+        } else {
+            "New class added for ${classSchedule.subject} on ${dateFormat.format(Date(classSchedule.date))} " +
+            "at ${timeFormat.format(Date(classSchedule.startTime))}"
+        }
     }
 
     override fun onDestroyView() {

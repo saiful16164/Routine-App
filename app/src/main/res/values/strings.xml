@@ -53,4 +53,11 @@
     <string name="verification_link_sent">Verification link sent to your email!</string>
     <string name="verification_sent_to">We\'ve sent a verification link to %1$s.\nPlease click the link in your email and then press Verify button.</string>
     <string name="resend_link">Resend Link</string>
+    <string name="no_notifications">No notifications yet</string>
+    <string name="edit_profile_image">Edit profile image</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="profile_updated">Profile updated successfully</string>
+    <string name="update_failed">Failed to update profile: %1$s</string>
+    <string name="select_image">Select Image</string>
 </resources>
