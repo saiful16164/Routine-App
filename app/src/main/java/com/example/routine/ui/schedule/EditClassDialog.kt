@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.app.TimePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
@@ -28,6 +29,7 @@ class EditClassDialog : DialogFragment() {
     private var onDelete: ((ClassSchedule) -> Unit)? = null
     private val dateFormat = SimpleDateFormat("EEEE, MMM dd, yyyy", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    private var isNoClass = false
 
     companion object {
         fun newInstance(
@@ -46,6 +48,7 @@ class EditClassDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         _binding = DialogEditClassBinding.inflate(LayoutInflater.from(context))
 
+        setupNoClassSwitch()
         setupDateSelector()
         setupTimeSelectors()
         if (classSchedule != null) {
@@ -84,6 +87,13 @@ class EditClassDialog : DialogFragment() {
         }
 
         return alertDialog
+    }
+
+    private fun setupNoClassSwitch() {
+        binding.noClassSwitch.setOnCheckedChangeListener { _, isChecked ->
+            isNoClass = isChecked
+            binding.classDetailsContainer.visibility = if (isChecked) View.GONE else View.VISIBLE
+        }
     }
 
     private fun setupDateSelector() {
@@ -125,15 +135,20 @@ class EditClassDialog : DialogFragment() {
     private fun setupExistingData() {
         classSchedule?.let { schedule ->
             binding.apply {
-                subjectEditText.setText(schedule.subject)
-                teacherEditText.setText(schedule.teacher)
-                roomEditText.setText(schedule.room)
-                selectedDate = schedule.date
-                startTime = schedule.startTime
-                endTime = schedule.endTime
-                dateEditText.setText(dateFormat.format(Date(selectedDate)))
-                startTimeEditText.setText(timeFormat.format(Date(startTime)))
-                endTimeEditText.setText(timeFormat.format(Date(endTime)))
+                noClassSwitch.isChecked = schedule.isNoClass
+                classDetailsContainer.visibility = if (schedule.isNoClass) View.GONE else View.VISIBLE
+                
+                if (!schedule.isNoClass) {
+                    subjectEditText.setText(schedule.subject)
+                    teacherEditText.setText(schedule.teacher)
+                    roomEditText.setText(schedule.room)
+                    selectedDate = schedule.date
+                    startTime = schedule.startTime
+                    endTime = schedule.endTime
+                    dateEditText.setText(dateFormat.format(Date(selectedDate)))
+                    startTimeEditText.setText(timeFormat.format(Date(startTime)))
+                    endTimeEditText.setText(timeFormat.format(Date(endTime)))
+                }
             }
         }
     }
@@ -174,6 +189,16 @@ class EditClassDialog : DialogFragment() {
     }
 
     private fun validateAndSave(): Boolean {
+        if (isNoClass) {
+            val schedule = ClassSchedule(
+                classId = classSchedule?.classId ?: UUID.randomUUID().toString(),
+                date = selectedDate,
+                isNoClass = true
+            )
+            onSave?.invoke(schedule)
+            return true
+        }
+
         val subject = binding.subjectEditText.text.toString().trim()
         val teacher = binding.teacherEditText.text.toString().trim()
         val room = binding.roomEditText.text.toString().trim()
@@ -196,7 +221,8 @@ class EditClassDialog : DialogFragment() {
             room = room,
             date = selectedDate,
             startTime = startTime,
-            endTime = endTime
+            endTime = endTime,
+            isNoClass = false
         )
 
         onSave?.invoke(schedule)

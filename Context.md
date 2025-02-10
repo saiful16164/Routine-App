@@ -5,7 +5,6 @@
 ### Tasks
 
 #### 1. Set up the project
-- Create new Android Studio project with Java
 - Connect to Firebase services:
   - Realtime Database
   - Authentication 
@@ -23,7 +22,6 @@
   ├── utils/
   └── services/
   ```
-- Set up Git repository
 
 #### 3. Design database schema
 - Firebase Realtime Database structure:

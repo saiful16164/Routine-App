@@ -96,6 +96,8 @@ class DailyScheduleFragment : Fragment() {
                     
                     viewLifecycleOwner.lifecycleScope.launch {
                         adapter.submitList(classes)
+                        binding.noClassText.visibility = if (classes.isEmpty()) View.VISIBLE else View.GONE
+                        binding.recyclerView.visibility = if (classes.isEmpty()) View.GONE else View.VISIBLE
                     }
                 }
 

@@ -38,4 +38,19 @@
     <string name="invalid_time">Invalid time selection</string>
     <string name="date">Date</string>
     <string name="select_date_first">Please select a date first</string>
+    <string name="no_class_today">No classes scheduled for today</string>
+    <string name="no_class_toggle">No Class Today</string>
+    <string name="verify_email">Verify Your Email</string>
+    <string name="verification_sent">We\'ve sent a verification code to your email address. Please enter it below.</string>
+    <string name="verification_code">Verification Code</string>
+    <string name="verify">Verify</string>
+    <string name="resend_code">Resend Code</string>
+    <string name="verification_success">Email verified successfully!</string>
+    <string name="verification_failed">Verification failed: %1$s</string>
+    <string name="code_sent">Verification code sent!</string>
+    <string name="code_expired">Verification code has expired</string>
+    <string name="invalid_code">Invalid verification code</string>
+    <string name="verification_link_sent">Verification link sent to your email!</string>
+    <string name="verification_sent_to">We\'ve sent a verification link to %1$s.\nPlease click the link in your email and then press Verify button.</string>
+    <string name="resend_link">Resend Link</string>
 </resources>

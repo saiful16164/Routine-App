@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.routine.MainActivity
+import com.example.routine.R
 import com.example.routine.databinding.ActivityRegisterBinding
 import com.example.routine.models.User
 import com.google.firebase.auth.FirebaseAuth
@@ -65,7 +66,7 @@ class RegisterActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(
                         this,
-                        getString(com.example.routine.R.string.registration_failed, task.exception?.message),
+                        getString(R.string.registration_failed, task.exception?.message),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -79,22 +80,24 @@ class RegisterActivity : AppCompatActivity() {
                 if (task.isSuccessful) {
                     Toast.makeText(
                         this,
-                        com.example.routine.R.string.registration_success,
+                        R.string.registration_success,
                         Toast.LENGTH_SHORT
                     ).show()
-                    startMainActivity()
+                    startVerification(user.email)
                 } else {
                     Toast.makeText(
                         this,
-                        getString(com.example.routine.R.string.registration_failed, task.exception?.message),
+                        getString(R.string.registration_failed, task.exception?.message),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }
     }
 
-    private fun startMainActivity() {
-        startActivity(Intent(this, MainActivity::class.java))
+    private fun startVerification(email: String) {
+        val intent = Intent(this, VerifyEmailActivity::class.java)
+        intent.putExtra("email", email)
+        startActivity(intent)
         finish()
     }
 } 
